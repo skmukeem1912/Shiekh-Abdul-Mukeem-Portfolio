@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('particles');
     const ctx = canvas.getContext('2d');
     let particles = [];
+    let animating = true;
     
     function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -10,6 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const particleCount = isMobile ? 30 : 50;
     
     class Particle {
         constructor() {
@@ -20,18 +24,25 @@ document.addEventListener('DOMContentLoaded', function() {
             this.x = Math.random() * canvas.width;
             this.y = Math.random() * canvas.height;
             this.size = Math.random() * 2 + 0.5;
-            this.speedX = (Math.random() - 0.5) * 0.5;
-            this.speedY = (Math.random() - 0.5) * 0.5;
+            this.speedX = (Math.random() - 0.5) * 0.3;
+            this.speedY = (Math.random() - 0.5) * 0.3;
             this.opacity = Math.random() * 0.5 + 0.1;
             this.color = Math.random() > 0.5 ? '#6366f1' : '#22d3ee';
+            this.resetCounter = 0;
         }
         
         update() {
             this.x += this.speedX;
             this.y += this.speedY;
+            this.resetCounter++;
             
-            if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-            if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                this.resetCounter++;
+            }
+            
+            if (this.resetCounter > 500 || this.x < -50 || this.x > canvas.width + 50 || this.y < -50 || this.y > canvas.height + 50) {
+                this.reset();
+            }
         }
         
         draw() {
@@ -44,11 +55,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < particleCount; i++) {
         particles.push(new Particle());
     }
     
+    const maxDistance = isMobile ? 100 : 150;
+    
     function animate() {
+        if (!animating) return;
+        
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         particles.forEach(p => {
@@ -56,24 +71,26 @@ document.addEventListener('DOMContentLoaded', function() {
             p.draw();
         });
         
-        particles.forEach((p1, i) => {
-            particles.slice(i + 1).forEach(p2 => {
-                const dx = p1.x - p2.x;
-                const dy = p1.y - p2.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                
-                if (dist < 150) {
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.strokeStyle = '#6366f1';
-                    ctx.globalAlpha = 0.1 * (1 - dist / 150);
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
-                }
+        if (!isMobile) {
+            particles.forEach((p1, i) => {
+                particles.slice(i + 1).forEach(p2 => {
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < maxDistance) {
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = '#6366f1';
+                        ctx.globalAlpha = 0.1 * (1 - dist / maxDistance);
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                    }
+                });
             });
-        });
+        }
         
         requestAnimationFrame(animate);
     }
@@ -82,10 +99,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const cursor = document.querySelector('.cursor');
     const cursorFollower = document.querySelector('.cursor-follower');
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     function moveCursor(x, y) {
-        if (cursor && cursorFollower) {
+        if (cursor && cursorFollower && !isMobile) {
             cursor.style.left = x + 'px';
             cursor.style.top = y + 'px';
             
@@ -96,34 +112,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    document.addEventListener('mousemove', (e) => {
-        moveCursor(e.clientX, e.clientY);
-    });
-    
-    if (isMobile) {
-        document.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 0) {
-                moveCursor(e.touches[0].clientX, e.touches[0].clientY);
-            }
+    if (!isMobile) {
+        document.addEventListener('mousemove', (e) => {
+            moveCursor(e.clientX, e.clientY);
         });
         
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) {
-                moveCursor(e.touches[0].clientX, e.touches[0].clientY);
-            }
+        document.querySelectorAll('a, button').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.transform = 'translate(-50%, -50%) scale(2)';
+                cursorFollower.style.transform = 'translate(-50%, -50%) scale(1.5)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursor.style.transform = 'translate(-50%, -50%) scale(1)';
+                cursorFollower.style.transform = 'translate(-50%, -50%) scale(1)';
+            });
         });
     }
-
-    document.querySelectorAll('a, button').forEach(el => {
-        el.addEventListener('mouseenter', () => {
-            cursor.style.transform = 'translate(-50%, -50%) scale(2)';
-            cursorFollower.style.transform = 'translate(-50%, -50%) scale(1.5)';
-        });
-        el.addEventListener('mouseleave', () => {
-            cursor.style.transform = 'translate(-50%, -50%) scale(1)';
-            cursorFollower.style.transform = 'translate(-50%, -50%) scale(1)';
-        });
-    });
 
     const navbar = document.querySelector('.navbar');
     window.addEventListener('scroll', function() {

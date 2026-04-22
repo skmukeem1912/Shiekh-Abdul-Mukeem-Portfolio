@@ -82,16 +82,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const cursor = document.querySelector('.cursor');
     const cursorFollower = document.querySelector('.cursor-follower');
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    function moveCursor(x, y) {
+        if (cursor && cursorFollower) {
+            cursor.style.left = x + 'px';
+            cursor.style.top = y + 'px';
+            
+            setTimeout(() => {
+                cursorFollower.style.left = x + 'px';
+                cursorFollower.style.top = y + 'px';
+            }, 100);
+        }
+    }
     
     document.addEventListener('mousemove', (e) => {
-        cursor.style.left = e.clientX + 'px';
-        cursor.style.top = e.clientY + 'px';
-        
-        setTimeout(() => {
-            cursorFollower.style.left = e.clientX - 16 + 'px';
-            cursorFollower.style.top = e.clientY - 16 + 'px';
-        }, 100);
+        moveCursor(e.clientX, e.clientY);
     });
+    
+    if (isMobile) {
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                moveCursor(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        });
+        
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                moveCursor(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        });
+    }
 
     document.querySelectorAll('a, button').forEach(el => {
         el.addEventListener('mouseenter', () => {
@@ -113,18 +134,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+const menuToggle = document.getElementById('menuToggle');
     const mobileNav = document.querySelector('.mobile-nav');
+    const barsIcon = menuToggle.querySelectorAll('i')[0];
+    const timesIcon = menuToggle.querySelectorAll('i')[1];
     
-    mobileMenuBtn.addEventListener('click', function() {
+    menuToggle.addEventListener('click', () => {
+        menuToggle.classList.toggle('active');
         mobileNav.classList.toggle('active');
-        this.classList.toggle('active');
+        
+        if (menuToggle.classList.contains('active')) {
+            barsIcon.style.display = 'none';
+            timesIcon.style.display = 'block';
+        } else {
+            barsIcon.style.display = 'block';
+            timesIcon.style.display = 'none';
+        }
     });
-
+    
     mobileNav.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', () => {
+            menuToggle.classList.remove('active');
             mobileNav.classList.remove('active');
-            mobileMenuBtn.classList.remove('active');
+            barsIcon.style.display = 'block';
+            timesIcon.style.display = 'none';
         });
     });
 
